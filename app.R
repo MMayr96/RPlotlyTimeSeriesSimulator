@@ -1,11 +1,20 @@
 #
 # This is a Shiny web application. You can run the application by clicking
 # the 'Run App' button above.
-#
-# Find out more about building applications with Shiny here:
-#
-#    http://shiny.rstudio.com/
-#
+
+list.of.packages <-
+    c("shiny",
+      "plotly",
+      "tictoc",
+      "shinycssloaders",
+      "magrittr",
+      "dplyr",
+      "data.table")
+
+new.packages <-
+    list.of.packages[!(list.of.packages %in% installed.packages()[, "Package"])]
+if (length(new.packages))
+    install.packages(new.packages)
 
 library(shiny)
 library(plotly)
@@ -14,45 +23,44 @@ library(shinycssloaders)
 library(magrittr)
 library(dplyr)
 library(data.table)
-library(dashR)
-library(dashCoreComponents)
-library(dashHtmlComponents)
 
-# Define UI for application that draws a histogram
+# Define UI for the application
 ui <- fluidPage(
+    
+    # number of points per feature
+    sliderInput(
+      "points",
+      "# Points per Feature",
+      min = 1,
+      max = 1000000,
+      value = 100000,
+      step = 50000
+    ),
+    # number of features to plot (plot range of cached features)
     sliderInput(
         "range",
-        "Metric Interval <start:end>",
+        "Features Plotting Range <start:end>",
         min = 1,
         max = 100,
         value = c(1, 10)
     ),
-    sliderInput(
-        "points",
-        "#Points",
-        min = 1,
-        max = 1000000,
-        value = 50000,
-        step = 50000
-    ),
+    # number of features cached
     sliderInput(
         "cached",
-        "#Cached",
+        "# Cached Features",
         min = 1,
         max = 1000,
         value = 50,
         step = 50
     ),
-    checkboxInput(
-        "lines",
-        "Lines",
-        value = TRUE
-    ),
-    checkboxInput(
-        "markers",
-        "Markers",
-        value = TRUE
-    ),
+    # plot with lines
+    checkboxInput("lines",
+                  "Lines",
+                  value = TRUE),
+    # plot with markers
+    checkboxInput("markers",
+                  "Markers",
+                  value = TRUE),
     mainPanel(plotlyOutput("plotlyplot", height = '100%') %>% withSpinner())
 )
 
@@ -87,12 +95,11 @@ server <- function(input, output) {
         cached <- data.frame(date = seq(1:size))
         
         for (i in seq(start:end)) {
-            cached[paste0("y", i)] <- rbinom(size, 10, 0.5)
+            cached[paste0("y", i)] <- rbinom(size, 100, 0.5)
         }
         toc()
         cached
     })
-    
     
     
     output$plotlyplot <- renderPlotly({
@@ -102,27 +109,27 @@ server <- function(input, output) {
         nr <- end - start
         
         fig <- generatePlotDF()[, start:end]
-        fig %<>% tidyr::gather(variable, value,-date)
+        fig %<>% tidyr::gather(variable, value, -date)
         fig  %<>% transform(id = as.integer(factor(variable)))
         fig %<>% as.data.table(fig)
-        # data rerieval.
+       
+         # data rerieval.
         tic(msg = "Data Plotting")
         
         n_fig <- nr
         
-        
         plot_size <- 200
         
         mode <- ""
-
-        if(my_lines() == T && my_markers() == T){
+        
+        if (my_lines() == T && my_markers() == T) {
             mode <- "lines+markers"
-        }else if(my_lines() == T && my_markers() == F){
+        } else if (my_lines() == T && my_markers() == F) {
             mode <- "lines"
-        }else{
+        } else{
             mode <- "markers"
         }
-
+        
         
         fig <- fig %>% plot_ly(
             x = ~ date,
@@ -144,7 +151,6 @@ server <- function(input, output) {
                 titleX = T,
                 margin = 0
             )
-        
         
         toc()
         fig
